@@ -1,0 +1,23 @@
+{
+  "name": "proyecto",
+  "version": "1.0.0",
+  "description": "",
+  "main": "node server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/adrianfonsecal/aws-project.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/adrianfonsecal/aws-project/issues"
+  },
+  "homepage": "https://github.com/adrianfonsecal/aws-project#readme",
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}
