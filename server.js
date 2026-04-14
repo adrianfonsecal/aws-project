@@ -1,6 +1,6 @@
 const express = require('express');
 const app = express();
-const port = 80; // Usamos el puerto 80 para que sea accesible directamente vía HTTP sin especificar puerto en el DNS
+const port = process.env.PORT || 80; // Usamos variable de entorno o puerto 80 por defecto
 
 // Middleware para parsear el body de las peticiones a JSON
 app.use(express.json());
@@ -75,7 +75,7 @@ app.post('/alumnos', (req, res) => {
         }
 
         const nuevoAlumno = {
-            id: alumnoIdCounter++,
+            id: req.body.id !== undefined ? req.body.id : alumnoIdCounter++,
             nombres: req.body.nombres,
             apellidos: req.body.apellidos,
             matricula: req.body.matricula,
@@ -87,6 +87,11 @@ app.post('/alumnos', (req, res) => {
     } catch (error) {
         res.status(500).json({ error: "Error interno del servidor" });
     }
+});
+
+// Manejador para métodos no permitidos en /alumnos (Para pasar la prueba testUnsuportedMethod)
+app.all('/alumnos', (req, res) => {
+    res.status(405).json({ error: "Método no permitido" });
 });
 
 // PUT /alumnos/{id}
@@ -171,7 +176,7 @@ app.post('/profesores', (req, res) => {
         }
 
         const nuevoProfesor = {
-            id: profesorIdCounter++,
+            id: req.body.id !== undefined ? req.body.id : profesorIdCounter++,
             numeroEmpleado: req.body.numeroEmpleado,
             nombres: req.body.nombres,
             apellidos: req.body.apellidos,
@@ -183,6 +188,11 @@ app.post('/profesores', (req, res) => {
     } catch (error) {
         res.status(500).json({ error: "Error interno del servidor" });
     }
+});
+
+// Manejador para métodos no permitidos en /profesores (Para pasar la prueba testUnsuportedMethod)
+app.all('/profesores', (req, res) => {
+    res.status(405).json({ error: "Método no permitido" });
 });
 
 // PUT /profesores/{id}
