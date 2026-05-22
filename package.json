@@ -18,6 +18,14 @@
   },
   "homepage": "https://github.com/adrianfonsecal/aws-project#readme",
   "dependencies": {
-    "express": "^5.2.1"
+    "@aws-sdk/client-dynamodb": "^3.1052.0",
+    "@aws-sdk/client-s3": "^3.1051.0",
+    "@aws-sdk/client-sns": "^3.1051.0",
+    "@aws-sdk/lib-dynamodb": "^3.1052.0",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "multer": "^2.1.1",
+    "mysql2": "^3.22.3",
+    "sequelize": "^6.37.8"
   }
 }
