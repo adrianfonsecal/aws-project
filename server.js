@@ -166,7 +166,11 @@ app.post('/alumnos/:id/fotoPerfil', upload.single('foto'), async (req, res) => {
         await alumno.save();
 
         res.status(200).json({ mensaje: "Foto subida", fotoPerfilUrl: fileUrl, alumno });
-    } catch (error) { res.status(500).json({ error: "Error interno al procesar imagen" }); }
+    } catch (error) {
+        // AHORA SÍ IMPRIMIRÁ EL ERROR REAL EN TU TERMINAL DE EC2
+        console.error("⚠️ DETALLE DEL ERROR DE S3:", error);
+        res.status(500).json({ error: "Error interno al procesar imagen" });
+    }
 });
 
 // ==========================================
