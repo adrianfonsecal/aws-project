@@ -147,30 +147,55 @@ app.all('/alumnos', (req, res) => { res.status(405).json({ error: "Método no pe
 // ==========================================
 // ENDPOINT: S3 SUBIR FOTO
 // ==========================================
-app.post('/alumnos/:id/fotoPerfil', upload.single('foto'), async (req, res) => {
-    try {
-        const alumno = await Alumno.findByPk(req.params.id);
-        if (!alumno) return res.status(404).json({ error: "Alumno no encontrado" });
-        if (!req.file) return res.status(400).json({ error: "No se proporcionó ninguna imagen." });
+app.post('/alumnos/:id/fotoPerfil', (req, res) => {
+    // Envolvemos multer en su propio controlador de errores
+    upload.single('foto')(req, res, async (err) => {
+        if (err) {
+            console.error("⚠️ Error interno de Multer:", err);
+            return res.status(400).json({ error: "Error al leer el archivo. Verifica el formato." });
+        }
 
-        const fileKey = `perfiles/alumno_${alumno.id}_${Date.now()}_${req.file.originalname}`;
-        const command = new PutObjectCommand({
-            Bucket: process.env.AWS_S3_BUCKET_NAME, Key: fileKey,
-            Body: req.file.buffer, ContentType: req.file.mimetype, ACL: 'public-read'
-        });
+        try {
+            console.log(`➡️ 1. Iniciando subida de foto para alumno ID: ${req.params.id}`);
 
-        await s3.send(command);
-        const fileUrl = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.amazonaws.com/${fileKey}`;
+            const alumno = await Alumno.findByPk(req.params.id);
+            if (!alumno) {
+                console.log("❌ Alumno no encontrado");
+                return res.status(404).json({ error: "Alumno no encontrado" });
+            }
 
-        alumno.fotoPerfilUrl = fileUrl;
-        await alumno.save();
+            if (!req.file) {
+                console.log("❌ No se encontró el archivo en la petición");
+                return res.status(400).json({ error: "No se proporcionó ninguna imagen." });
+            }
 
-        res.status(200).json({ mensaje: "Foto subida", fotoPerfilUrl: fileUrl, alumno });
-    } catch (error) {
-        // AHORA SÍ IMPRIMIRÁ EL ERROR REAL EN TU TERMINAL DE EC2
-        console.error("⚠️ DETALLE DEL ERROR DE S3:", error);
-        res.status(500).json({ error: "Error interno al procesar imagen" });
-    }
+            console.log(`✅ 2. Archivo recibido en RAM: ${req.file.originalname} (${(req.file.size / 1024).toFixed(2)} KB)`);
+
+            const fileKey = `perfiles/alumno_${alumno.id}_${Date.now()}_${req.file.originalname}`;
+            const command = new PutObjectCommand({
+                Bucket: process.env.AWS_S3_BUCKET_NAME,
+                Key: fileKey,
+                Body: req.file.buffer,
+                ContentType: req.file.mimetype,
+                ACL: 'public-read'
+            });
+
+            console.log("☁️ 3. Enviando comando a Amazon S3...");
+            await s3.send(command);
+            console.log("✅ 4. S3 respondió correctamente (Foto guardada)");
+
+            const fileUrl = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.amazonaws.com/${fileKey}`;
+
+            alumno.fotoPerfilUrl = fileUrl;
+            await alumno.save();
+
+            console.log("✅ 5. Base de datos actualizada");
+            res.status(200).json({ mensaje: "Foto subida", fotoPerfilUrl: fileUrl, alumno });
+        } catch (error) {
+            console.error("⚠️ DETALLE DEL ERROR DE S3:", error);
+            res.status(500).json({ error: "Error interno al procesar imagen" });
+        }
+    });
 });
 
 // ==========================================
