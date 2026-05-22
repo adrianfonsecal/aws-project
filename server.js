@@ -9,6 +9,7 @@ const { SNSClient, PublishCommand } = require('@aws-sdk/client-sns');
 const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
 const { DynamoDBDocumentClient, PutCommand, ScanCommand, UpdateCommand } = require('@aws-sdk/lib-dynamodb');
 const crypto = require('crypto');
+const fs = require('fs'); // Añadido para leer archivos del disco duro
 
 const app = express();
 const port = process.env.PORT || 80;
@@ -34,7 +35,8 @@ const snsClient = new SNSClient(awsConfig);
 const ddbClient = new DynamoDBClient(awsConfig);
 const docClient = DynamoDBDocumentClient.from(ddbClient);
 
-const upload = multer({ storage: multer.memoryStorage() });
+// CAMBIO AQUÍ: Usamos el disco duro en lugar de la memoria RAM
+const upload = multer({ dest: '/tmp/uploads/' });
 
 // ==========================================
 // CONFIGURACIÓN DE SEQUELIZE (RDS)
@@ -147,8 +149,11 @@ app.all('/alumnos', (req, res) => { res.status(405).json({ error: "Método no pe
 // ==========================================
 // ENDPOINT: S3 SUBIR FOTO
 // ==========================================
-app.post('/alumnos/:id/fotoPerfil', (req, res) => {
-    // Envolvemos multer en su propio controlador de errores
+// Añadimos un punto de control antes de que multer procese el archivo
+app.post('/alumnos/:id/fotoPerfil', (req, res, next) => {
+    console.log(`\n--- Petición recibida en /alumnos/${req.params.id}/fotoPerfil ---`);
+    next();
+}, (req, res) => {
     upload.single('foto')(req, res, async (err) => {
         if (err) {
             console.error("⚠️ Error interno de Multer:", err);
@@ -169,13 +174,16 @@ app.post('/alumnos/:id/fotoPerfil', (req, res) => {
                 return res.status(400).json({ error: "No se proporcionó ninguna imagen." });
             }
 
-            console.log(`✅ 2. Archivo recibido en RAM: ${req.file.originalname} (${(req.file.size / 1024).toFixed(2)} KB)`);
+            console.log(`✅ 2. Archivo guardado temporalmente en disco: ${req.file.path}`);
 
+            // Leemos el archivo desde el disco
+            const fileStream = fs.createReadStream(req.file.path);
             const fileKey = `perfiles/alumno_${alumno.id}_${Date.now()}_${req.file.originalname}`;
+
             const command = new PutObjectCommand({
                 Bucket: process.env.AWS_S3_BUCKET_NAME,
                 Key: fileKey,
-                Body: req.file.buffer,
+                Body: fileStream,
                 ContentType: req.file.mimetype,
                 ACL: 'public-read'
             });
@@ -183,6 +191,9 @@ app.post('/alumnos/:id/fotoPerfil', (req, res) => {
             console.log("☁️ 3. Enviando comando a Amazon S3...");
             await s3.send(command);
             console.log("✅ 4. S3 respondió correctamente (Foto guardada)");
+
+            // Borramos el archivo temporal del disco para no llenar la instancia
+            fs.unlinkSync(req.file.path);
 
             const fileUrl = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.amazonaws.com/${fileKey}`;
 
